@@ -3,7 +3,7 @@
     "displayName": "Paragraph hard wrapper",
     "description": "Replicates Sublime Text Alt + Q command on VS Code",
     "version": "0.0.1",
-    "publisher": "Jussi Haapanen",
+    "publisher": "haapanen",
     "engines": {
         "vscode": "^1.0.0"
     },
