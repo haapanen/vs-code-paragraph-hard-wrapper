@@ -1,13 +1,19 @@
 'use strict';
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+
+import {
+    ExtensionContext,
+    workspace,
+    commands,
+    window,
+    TextEditor,
+    Range
+} from 'vscode';
 
 function onlyWhitespace(text: string): boolean {
     return !/\S/.test(text);
 }
 
-function getSelectedParagraph(editor: vscode.TextEditor): vscode.Range {
+function getSelectedParagraph(editor: TextEditor): Range {
     let start = editor.selection.active;
     let end = editor.selection.active;
     let current = editor.selection.active;
@@ -25,8 +31,17 @@ function getSelectedParagraph(editor: vscode.TextEditor): vscode.Range {
         end = end.translate(1);
     }
     end = end.with(end.line, editor.document.lineAt(end).text.length);
-    
-    return new vscode.Range(start, end);
+
+    return new Range(start, end);
+}
+
+function addWord(line: string, word: string): string {
+    if (line.length === 0) {
+        return word;
+    }
+    else {
+        return line + " " + word;
+    }
 }
 
 function hardWrapText(text: string, maxLineLen: number): string {
@@ -40,12 +55,12 @@ function hardWrapText(text: string, maxLineLen: number): string {
             continue;
         }
 
-        if (currentLine.length + word.length > maxLineLen) {
+        if (currentLine.length + word.length + 1 > maxLineLen) {
             lines += currentLine + "\n";
             currentLine = "";
         }
 
-        currentLine += word + " ";
+        currentLine = addWord(currentLine, word);
     }
     if (currentLine.length > 0) {
         lines += currentLine + "\n";
@@ -54,17 +69,24 @@ function hardWrapText(text: string, maxLineLen: number): string {
     return lines;
 }
 
-export function activate(context: vscode.ExtensionContext) {
-    let disposable = vscode.commands.registerCommand('paragraphHardWrapper.wrap', () => {
-        const editor = vscode.window.activeTextEditor;
+export function activate(context: ExtensionContext) {
+    let disposable = commands.registerCommand('paragraphHardWrapper.wrap', () => {
+        const editor = window.activeTextEditor
         if (!editor)  {
             return;
         }
 
+        // Get the smallest ruler
+        const rulers: Array<number> = workspace.getConfiguration('editor').get('rulers');
+        let maxLen: number = workspace.getConfiguration('paragraphHardWrapper').get('defaultWrapColumn');
+        if (rulers.length > 0) {
+            maxLen = rulers.sort((a, b) => b - a)[0];
+        }
+
         let selectedParagraph = getSelectedParagraph(editor);
         const paragraphText = editor.document.getText(selectedParagraph);
-        const formattedText = hardWrapText(paragraphText, 80);
-        
+        const formattedText = hardWrapText(paragraphText, maxLen);
+
         editor.edit((editBuilder) => {
             editBuilder.replace(selectedParagraph, formattedText);
         });
